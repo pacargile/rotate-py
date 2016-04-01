@@ -21,100 +21,167 @@ function c_to_f_string(s) result(str)
   str = transfer(s(1:nchars), str)
 end function c_to_f_string
 
+FUNCTION MAP1(XOLD,FOLD,NOLD,XNEW,FNEW,NNEW)
+      DIMENSION XOLD(1),FOLD(1),XNEW(1),FNEW(1)
+      L=2
+      LL=0
+      DO 50 K=1,NNEW
+   10 IF(XNEW(K).LT.XOLD(L))GO TO 20
+      L=L+1
+      IF(L.GT.NOLD)GO TO 30
+      GO TO 10
+   20 IF(L.EQ.LL)GO TO 50
+      IF(L.EQ.2)GO TO 30
+      IF(L.EQ.3)GO TO 30
+      L1=L-1
+      IF(L.GT.LL+1.OR.L.EQ.3)GO TO 21
+      IF(L.GT.LL+1.OR.L.EQ.4)GO TO 21
+      CBAC=CFOR
+      BBAC=BFOR
+      ABAC=AFOR
+      IF(L.EQ.NOLD)GO TO 22
+      GO TO 25
+   21 L2=L-2
+      D=(FOLD(L1)-FOLD(L2))/(XOLD(L1)-XOLD(L2))
+      CBAC=FOLD(L)/((XOLD(L)-XOLD(L1))*(XOLD(L)-XOLD(L2)))+
+     1(FOLD(L2)/(XOLD(L)-XOLD(L2))-FOLD(L1)/(XOLD(L)-XOLD(L1)))/
+     2(XOLD(L1)-XOLD(L2))
+      BBAC=D-(XOLD(L1)+XOLD(L2))*CBAC
+      ABAC=FOLD(L2)-XOLD(L2)*D+XOLD(L1)*XOLD(L2)*CBAC
+      IF(L.LT.NOLD)GO TO 25
+   22 C=CBAC
+      B=BBAC
+      A=ABAC
+      LL=L
+      GO TO 50
+   25 D=(FOLD(L)-FOLD(L1))/(XOLD(L)-XOLD(L1))
+      CFOR=FOLD(L+1)/((XOLD(L+1)-XOLD(L))*(XOLD(L+1)-XOLD(L1)))+
+     1(FOLD(L1)/(XOLD(L+1)-XOLD(L1))-FOLD(L)/(XOLD(L+1)-XOLD(L)))/
+     2(XOLD(L)-XOLD(L1))
+      BFOR=D-(XOLD(L)+XOLD(L1))*CFOR
+      AFOR=FOLD(L1)-XOLD(L1)*D+XOLD(L)*XOLD(L1)*CFOR
+      WT=0.
+      IF(ABS(CFOR).NE.0.)WT=ABS(CFOR)/(ABS(CFOR)+ABS(CBAC))
+      A=AFOR+WT*(ABAC-AFOR)
+      B=BFOR+WT*(BBAC-BFOR)
+      C=CFOR+WT*(CBAC-CFOR)
+      LL=L
+      GO TO 50
+   30 IF(L.EQ.LL)GO TO 50
+      L=AMIN0(NOLD,L)
+      C=0.
+      B=(FOLD(L)-FOLD(L-1))/(XOLD(L)-XOLD(L-1))
+      A=FOLD(L)-XOLD(L)*B
+      LL=L
+   50 FNEW(K)=A+(B+C*XNEW(K))*XNEW(K)
+      MAP1=LL-1
+END FUNCTION MAP1
 
-subroutine rotate()bind(c,name='rotate')
-        use iso_c_binding, only: c_double, c_int, c_char, c_null_char
-        integer, parameter :: dp=kind(0.d0)
 
-      parameter (npiece=2000,npiece2=npiece*2,npiece3=npiece*3)
+subroutine rotate(NWL,NMU)bind(c,name='rotate')
+      use iso_c_binding, only: c_double, c_int, c_char, c_null_char
+      integer, parameter :: dp=kind(0.d0)
+      integer(c_int), intent(in), value :: NWL
+      integer(c_int), intent(in), value :: NMU
+
+      integer, parameter :: npiece=2000,npiece2=npiece*2,npiece3=npiece*3
+
       COMMON /HROT/H(500),HROT(npiece3)
       COMMON /WT/MUNWT(10000),IVNWT(10000),WTNWT(10000)
+
       DIMENSION CONT(npiece2)
       DIMENSION WTMU(100)
       DIMENSION XMU100(100),INT100(102)
       EQUIVALENCE (INT100(101),FLUX),(INT100(102),CONTIN)
       DIMENSION R(25),INTEN(26),XX(26)
-      REAL*8 TEFF,GLOG,TITLE(74),WBEGIN,RESOLU,XMU(20),WLEDGE(377)
-      REAL*8 QMU(40),Q2(2)
-      REAL*8 LINDAT8(14)
-      REAL*4 LINDAT(28)
-      REAL INT100
-      REAL INTEN
-C      REAL*8 WEND
-      REAL*8 WEND,RATIO
       DIMENSION VROT(25)
       EQUIVALENCE (DUMMY,IDUMMY)
-C      CHARACTER*5 ROTNAME(25)
+
+      REAL :: TEFF,GLOG,TITLE(74),WBEGIN,RESOLU,XMU(20),WLEDGE(377)
+      REAL :: QMU(40),Q2(2)
+      REAL :: LINDAT8(14)
+      REAL :: LINDAT(28)
+      REAL :: INT100
+      REAL :: INTEN
+      REAL :: WEND,RATIO
+
       CHARACTER*4 ROTNAME(9)
-      DIMENSION APLOT(101)
-      DATA APLOT/101*1H /
-C      DATA ROTNAME/'ROT1','ROT2','ROT3','ROT4','ROT5','ROT6','ROT7',
-C     1     'ROT8','ROT9','ROT10','ROT11','ROT12','ROT13','ROT14',
-C     $     'ROT15',
-C     2     'ROT16','ROT17','ROT18','ROT19','ROT20','ROT21','ROT22',
-C     3     'ROT23','ROT24','ROT25'/
+
       DATA ROTNAME/'ROT1','ROT2','ROT3','ROT4','ROT5','ROT6','ROT7',
      1     'ROT8','ROT9'/
-C      CHARACTER*9 RUNID
-C      CALL GETARG(1,RUNID)
-C     CALL BEGTIME
-      DO 7 I=1,100
-    7 XMU100(I)=FLOAT(I)*.01-.005
-      LINOUT=100000
-C       LINOUT=300
+
+      ! Open tempory file for internal I/O
       OPEN(UNIT=19,FILE='fort.19',STATUS='OLD',
      $     FORM='UNFORMATTED', POSITION='REWIND')
+
+      ! READ vel info
       READ(5,1001)NROT,NRADIUS,(VROT(IROT),IROT=1,NROT)
  1001 FORMAT(I5,I5/(8F10.1))
-C     IF(NRADIUS.EQ.0)NRADIUS=50
-      IF(NRADIUS.EQ.0)NRADIUS=100
-      WRITE(6,1002)NROT,NRADIUS,(VROT(IROT),IROT=1,NROT)
- 1002 FORMAT(18H1ROTATION          ,I3,I5,10F6.1/(10F6.1))
+
+      ! READ in initial spectrum
       OPEN(UNIT=1,FILE='fort.1',FORM='UNFORMATTED',STATUS='OLD',
      $     POSITION='REWIND')
 C      REWIND 1
       READ(1)TEFF,GLOG,TITLE,WBEGIN,RESOLU,NWL,IFSURF,NMU,XMU,
      $     NEDGE,WLEDGE
-C     IFSURF=3 FOR ROTATED SPECTRUM
-      IFSURF=3
+
+C     IF(NRADIUS.EQ.0)NRADIUS=50
+      IF(NRADIUS.EQ.0)NRADIUS=100
+      WRITE(6,1002)NROT,NRADIUS,(VROT(IROT),IROT=1,NROT)
+ 1002 FORMAT(18H1ROTATION          ,I3,I5,10F6.1/(10F6.1))
+
       WRITE(6,1010)TEFF,GLOG,TITLE
  1010 FORMAT(  5H TEFF,F7.0,7H   GRAV,F7.3/7H TITLE ,74A1)
       WRITE(6,1007)NMU,(XMU(IMU),IMU=1,NMU)
  1007 FORMAT(18H SURFACE INTENSITY,I3,10F6.3/10F6.3)
+
+     ! Initialize temp arrays
+      DO 7 I=1,100
+      7 XMU100(I)=FLOAT(I)*.01-.005
+
+      DO 11 MU=1,NMU
+         NN=NMU-MU+2
+      11 XX(NN)=XMU(MU)
+
+      ! Define some useful numbers
       RATIO=1.+1./RESOLU
       WEND=WBEGIN*RATIO**(NWL-1)
-      VSTEP=299792.458D0/RESOLU
-      WRITE(6,1005)WBEGIN,WEND,RESOLU,VSTEP
- 1005 FORMAT(2F12.5,F12.1,F12.5)
+      VSTEP=299792.458_dp/RESOLU
       NMU2=NMU+NMU
-C
       XX(1)=0.
       NM1=NMU+1
-      DO 11 MU=1,NMU
-      NN=NMU-MU+2
-   11 XX(NN)=XMU(MU)
+      LINOUT=100000
+C       LINOUT=300
+C     IFSURF=3 FOR ROTATED SPECTRUM
+      IFSURF=3
+
+      WRITE(6,1005)WBEGIN,WEND,RESOLU,VSTEP
+ 1005 FORMAT(2F12.5,F12.1,F12.5)
+
+      ! Initialize WTROT subroutine to set common blocks
       CALL WTROT(0.,0.,0,NWT,WTMU,NRADIUS)
       WRITE(6,777)WTMU
   777 FORMAT(1P10E12.3)
+
       INTEN(1)=0.
       DO 19 IWL=1,NWL
-      READ(1)(QMU(I),I=1,NMU2)
-      FLUX=0.
-      CONTIN=0.
-      DO 13 MU=1,NMU
-      NN=NMU-MU+2
-   13 INTEN(NN)=QMU(MU+NMU)
-      IDUMMY=MAP1(XX,INTEN,NM1,XMU100,INT100,100)
-      DO 14 I=1,100
-   14 CONTIN=CONTIN+INT100(I)*WTMU(I)
-      DO 15 MU=1,NMU
-      NN=NMU-MU+2
-   15 INTEN(NN)=QMU(MU)
-      IDUMMY=MAP1(XX,INTEN,NM1,XMU100,INT100,100)
-      DO 16 I=1,100
-   16 FLUX=FLUX+INT100(I)*WTMU(I)
-      WRITE(19)INT100
-   19 CONTINUE
+         READ(1)(QMU(I),I=1,NMU2)
+         FLUX=0.
+         CONTIN=0.
+         DO 13 MU=1,NMU
+            NN=NMU-MU+2
+         13 INTEN(NN)=QMU(MU+NMU)
+         IDUMMY=MAP1(XX,INTEN,NM1,XMU100,INT100,100)
+         DO 14 I=1,100
+         14 CONTIN=CONTIN+INT100(I)*WTMU(I)
+         DO 15 MU=1,NMU
+            NN=NMU-MU+2
+         15 INTEN(NN)=QMU(MU)
+         IDUMMY=MAP1(XX,INTEN,NM1,XMU100,INT100,100)
+         DO 16 I=1,100
+         16 FLUX=FLUX+INT100(I)*WTMU(I)
+         WRITE(19)INT100
+      19 CONTINUE
       NMU=1
 C
       DO 500 IROT=1,NROT
@@ -136,9 +203,9 @@ C
  7171    FORMAT(3HNAV,1H,6HNAV100,1H,6HNAVNAV)
          write(6,778)NAV,NAV100,NAVNAV
  778     FORMAT(10I10)
-C        CHECKS FOR VEL = 0
+       ! CHECKS FOR VEL = 0
          IF(VEL.EQ.0.)GO TO 50
-C        IF WE HAVE A VROT, DO THE BROADENING
+       ! IF WE HAVE A VROT, DO THE BROADENING
          CALL WTROT(VEL,VSTEP,NV,NWT,WTMU,NRADIUS)
          WRITE(6,1013)NWT
  1013    FORMAT(4H NWT,I6)
@@ -251,8 +318,10 @@ C             WRITE(6,2300)IWL,WAVE,IRESID,APLOT
  500     CLOSE(UNIT=9)
       CLOSE(UNIT=2,DISPOSE='DELETE')
       CALL EXIT
-      END
-      SUBROUTINE WTROT(VEL,VSTEP,NV,NWT,WTMU,NRAD)
+      RETURN
+end subroutine rotate
+
+SUBROUTINE WTROT(VEL,VSTEP,NV,NWT,WTMU,NRAD)
       COMMON /WT/MUNWT(10000),IVNWT(10000),WTNWT(10000)
       DIMENSION WTMU(100)
       REAL*4 LAT
@@ -314,64 +383,9 @@ C     POSITIVE AND NEGATIVE DOPPLER SHIFTS
  310     WTNWT(NWT)=WTNWT(NWT)+W
   300 CONTINUE
       RETURN
-      END
-      FUNCTION MAP1(XOLD,FOLD,NOLD,XNEW,FNEW,NNEW)
-      DIMENSION XOLD(1),FOLD(1),XNEW(1),FNEW(1)
-      L=2
-      LL=0
-      DO 50 K=1,NNEW
-   10 IF(XNEW(K).LT.XOLD(L))GO TO 20
-      L=L+1
-      IF(L.GT.NOLD)GO TO 30
-      GO TO 10
-   20 IF(L.EQ.LL)GO TO 50
-      IF(L.EQ.2)GO TO 30
-      IF(L.EQ.3)GO TO 30
-      L1=L-1
-      IF(L.GT.LL+1.OR.L.EQ.3)GO TO 21
-      IF(L.GT.LL+1.OR.L.EQ.4)GO TO 21
-      CBAC=CFOR
-      BBAC=BFOR
-      ABAC=AFOR
-      IF(L.EQ.NOLD)GO TO 22
-      GO TO 25
-   21 L2=L-2
-      D=(FOLD(L1)-FOLD(L2))/(XOLD(L1)-XOLD(L2))
-      CBAC=FOLD(L)/((XOLD(L)-XOLD(L1))*(XOLD(L)-XOLD(L2)))+
-     1(FOLD(L2)/(XOLD(L)-XOLD(L2))-FOLD(L1)/(XOLD(L)-XOLD(L1)))/
-     2(XOLD(L1)-XOLD(L2))
-      BBAC=D-(XOLD(L1)+XOLD(L2))*CBAC
-      ABAC=FOLD(L2)-XOLD(L2)*D+XOLD(L1)*XOLD(L2)*CBAC
-      IF(L.LT.NOLD)GO TO 25
-   22 C=CBAC
-      B=BBAC
-      A=ABAC
-      LL=L
-      GO TO 50
-   25 D=(FOLD(L)-FOLD(L1))/(XOLD(L)-XOLD(L1))
-      CFOR=FOLD(L+1)/((XOLD(L+1)-XOLD(L))*(XOLD(L+1)-XOLD(L1)))+
-     1(FOLD(L1)/(XOLD(L+1)-XOLD(L1))-FOLD(L)/(XOLD(L+1)-XOLD(L)))/
-     2(XOLD(L)-XOLD(L1))
-      BFOR=D-(XOLD(L)+XOLD(L1))*CFOR
-      AFOR=FOLD(L1)-XOLD(L1)*D+XOLD(L)*XOLD(L1)*CFOR
-      WT=0.
-      IF(ABS(CFOR).NE.0.)WT=ABS(CFOR)/(ABS(CFOR)+ABS(CBAC))
-      A=AFOR+WT*(ABAC-AFOR)
-      B=BFOR+WT*(BBAC-BFOR)
-      C=CFOR+WT*(CBAC-CFOR)
-      LL=L
-      GO TO 50
-   30 IF(L.EQ.LL)GO TO 50
-      L=AMIN0(NOLD,L)
-      C=0.
-      B=(FOLD(L)-FOLD(L-1))/(XOLD(L)-XOLD(L-1))
-      A=FOLD(L)-XOLD(L)*B
-      LL=L
-   50 FNEW(K)=A+(B+C*XNEW(K))*XNEW(K)
-      MAP1=LL-1
-      RETURN
-      END
-      SUBROUTINE INTSORT(DATA,N)
+END SUBROUTINE WTROT
+
+SUBROUTINE INTSORT(DATA,N)
       INTEGER X,Z,DATA(1)
       NTRY=0
       N1=2
@@ -409,7 +423,7 @@ C     POSITIVE AND NEGATIVE DOPPLER SHIFTS
       IF(NTRY-5)15,15,18
    16 CONTINUE
    18 RETURN
+END SUBROUTINE INTSORT
 
-end subroutine broaden
 
 end module
