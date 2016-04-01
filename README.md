@@ -1,6 +1,8 @@
 # rotate-py
 Python hooks and glue code for Bob Kurucz rotate.for program
 
+CURRENTLY A WORK IN PROGRESS
+
 Files:
 
 rotate.f90 -> Fortran code that is directly taken from Bob's rotate.for code
