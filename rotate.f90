@@ -90,7 +90,7 @@ FUNCTION MAP1(XOLD,FOLD,NOLD,XNEW,FNEW,NNEW) result(NULL)
 END FUNCTION MAP1
 
 
-subroutine rotate(fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
+subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
       use iso_c_binding, only: c_double, c_int, c_char, c_null_char
       integer, parameter :: dp=kind(0.d0)
       integer(c_int), intent(in), value :: NWL
@@ -98,12 +98,13 @@ subroutine rotate(fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
       integer(c_int), intent(in), value :: NRADIUS
       real(c_double), intent(in), value :: VROT
 
+      real(c_double), intent(in) :: wli(NWL)
       real(c_double), intent(in) :: fluxi(NWL,NMU)
       real(c_double), intent(out) :: fluxo(NWL)
 
       integer, parameter :: npiece=2000,npiece2=npiece*2,npiece3=npiece*3
 
-      REAL :: TEFF,GLOG,TITLE(74),WBEGIN,RESOLU,XMU(20),WLEDGE(377)
+      REAL :: TEFF,GLOG,TITLE(74),RESOLU,WBEGIN,XMU(20),WLEDGE(377)
       REAL :: QMU(40),Q2(2)
       REAL :: LINDAT8(14)
       REAL :: LINDAT(28)
@@ -167,20 +168,25 @@ subroutine rotate(fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
       11 XX(NN)=XMU(MU)
 
       ! Define some useful numbers
-      RATIO=1.+1./RESOLU
-      WEND=WBEGIN*RATIO**(NWL-1)
+      WBEGIN = wli(1)
+      WEND = wli(NWL)
+
+      RESOLU = 1._dp / ( ((WEND/WBEGIN)**(1._dp/(NWL-1))) - 1._dp)
+
+      ! RATIO=1.+1./RESOLU
+      ! WEND=WBEGIN*RATIO**(NWL-1)
       VSTEP=299792.458_dp/RESOLU
       NMU2=NMU+NMU
       XX(1)=0.
       NM1=NMU+1
 
-      WRITE(6,1005)WBEGIN,WEND,RESOLU,VSTEP
- 1005 FORMAT(2F12.5,F12.1,F12.5)
+ !      WRITE(6,1005)WBEGIN,WEND,RESOLU,VSTEP
+ ! 1005 FORMAT(2F12.5,F12.1,F12.5)
 
-      ! Initialize WTROT subroutine to set common blocks
-      CALL WTROT(0.,0.,0,NWT,WTMU,NRADIUS)
-      WRITE(6,777)WTMU
-  777 FORMAT(1P10E12.3)
+ !      ! Initialize WTROT subroutine to set common blocks
+ !      CALL WTROT(0.,0.,0,NWT,WTMU,NRADIUS)
+ !      WRITE(6,777)WTMU
+ !  777 FORMAT(1P10E12.3)
 
       ! WRITE DUMMY ARRAYS INTO FORT.19
       INTEN(1)=0.
@@ -188,7 +194,6 @@ subroutine rotate(fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 
          ! PULL THE FLUX ARRAY FOR EACH MU
 !          READ(1)(QMU(I),I=1,NMU2)
-
          QMU = fluxi(IWL,1:NMU2)
 
          FLUX=0.
@@ -215,6 +220,7 @@ subroutine rotate(fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 
 !       NMU=1
 ! C
+      print *, 'DO BROADENING'
       ! DO BROADENING
        REWIND 19
        VEL=ABS(VROT)
