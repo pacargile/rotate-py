@@ -99,13 +99,13 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
       real(c_double), intent(in), value :: VROT
 
       real(c_double), intent(in) :: wli(NWL)
-      real(c_double), intent(in) :: fluxi(NWL,NMU)
+      real(c_double), intent(in) :: fluxi(NWL)
       real(c_double), intent(out) :: fluxo(NWL)
 
       integer, parameter :: npiece=2000,npiece2=npiece*2,npiece3=npiece*3
 
       REAL :: TEFF,GLOG,TITLE(74),RESOLU,WBEGIN,XMU(20),WLEDGE(377)
-      REAL :: QMU(40),Q2(2)
+      REAL :: QMU(NMU),Q2(2)
       REAL :: LINDAT8(14)
       REAL :: LINDAT(28)
       REAL :: INT100
@@ -114,7 +114,7 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
       REAL :: MUNWT, QH, R, VEL, VSTEP, W, WTMU, WTNWT, XMU100
       REAL :: XX
 
-      INTEGER :: I, IV, IVNWT, IWL, J, K, KWL, MAX, MU
+      INTEGER :: I, II, IV, IVNWT, IWL, J, K, KWL, MAX, MU
       INTEGER :: NV, NAV, NAV100, NAVNAV, NAVWT, NM1, NMU2, NN, NWT
       CHARACTER :: IDUMMY
 
@@ -160,12 +160,12 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 !  1007 FORMAT(18H SURFACE INTENSITY,I3,10F6.3/10F6.3)
 
      ! Initialize temp arrays
-      DO 7 I=1,100
-      7 XMU100(I)=FLOAT(I)*.01-.005
+      ! DO 7 I=1,100
+      ! 7 XMU100(I)=FLOAT(I)*.01-.005
 
-      DO 11 MU=1,NMU
-         NN=NMU-MU+2
-      11 XX(NN)=XMU(MU)
+      ! DO 11 MU=1,NMU
+      !    NN=NMU-MU+2
+      ! 11 XX(NN)=XMU(MU)
 
       ! Define some useful numbers
       WBEGIN = wli(1)
@@ -180,23 +180,24 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
       XX(1)=0.
       NM1=NMU+1
 
- !      WRITE(6,1005)WBEGIN,WEND,RESOLU,VSTEP
- ! 1005 FORMAT(2F12.5,F12.1,F12.5)
+      WRITE(6,1005)WBEGIN,WEND,RESOLU,VSTEP
+ 1005 FORMAT(2F12.5,F12.1,F12.5)
 
- !      ! Initialize WTROT subroutine to set common blocks
- !      CALL WTROT(0.,0.,0,NWT,WTMU,NRADIUS)
- !      WRITE(6,777)WTMU
- !  777 FORMAT(1P10E12.3)
+      ! Initialize WTROT subroutine to set common blocks
+      CALL WTROT(0.,0.,0,NWT,WTMU,NRADIUS)
+  !     WRITE(6,777)WTMU
+  ! 777 FORMAT(1P10E12.3)
 
       ! WRITE DUMMY ARRAYS INTO FORT.19
-      INTEN(1)=0.
-      DO 19 IWL=1,NWL
+!      INTEN(1)=0.
+!      DO 19 IWL=1,NWL
 
          ! PULL THE FLUX ARRAY FOR EACH MU
 !          READ(1)(QMU(I),I=1,NMU2)
-         QMU = fluxi(IWL,1:NMU2)
+!         DO 999 II=1,NMU
+ !        999 QMU(II) = fluxi(IWL,II)
 
-         FLUX=0.
+!         FLUX=0.
 !          CONTIN=0.
 
 !          DO 13 MU=1,NMU
@@ -207,16 +208,18 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 !          DO 14 I=1,100
 !          14 CONTIN=CONTIN+INT100(I)*WTMU(I)
 
-         DO 15 MU=1,NMU
-            NN=NMU-MU+2
-         15 INTEN(NN)=QMU(MU)
+ !        DO 15 MU=1,NMU
+ !           NN=NMU-MU+2
+ !        15 INTEN(NN)=QMU(MU)
 
-         IDUMMY=MAP1(XX,INTEN,NM1,XMU100,INT100,100)
-         DO 16 I=1,100
-         16 FLUX=FLUX+INT100(I)*WTMU(I)
+ !        IDUMMY=MAP1(XX,INTEN,NM1,XMU100,INT100,100)
+ !        DO 16 I=1,100
+  !       16 FLUX=FLUX+INT100(I)*WTMU(I)
 
-         WRITE(19)INT100
-      19 CONTINUE
+  !       print *, FLUX, IWL
+
+  !       WRITE(19)INT100
+  !    19 CONTINUE
 
 !       NMU=1
 ! C
@@ -249,18 +252,18 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 1013   FORMAT(4H NWT,I6)
 
        DO 29 IWL=1,npiece3
-29         HROT(IWL)=0.
+       29 HROT(IWL)=0.
 
        DO 40 IWL=npiece+1,NWL+npiece,npiece
           MAX=MIN0(npiece2,NWL+npiece2-IWL+1)
           DO 30 J=npiece+1,MAX
              KWL=IWL+J-npiece2-1
-             READ(19)INT100
+             ! READ(19)INT100
 !              CONT(J)=CONTIN
              DO 25 I=1,NWT
                 MU=MUNWT(I)
                 IV=IVNWT(I)
-                W=WTNWT(I)*INT100(MU)
+                W=WTNWT(I)*fluxi(KWL)
                 HROT(J-IV)=HROT(J-IV)+W
              25 HROT(J+IV)=HROT(J+IV)+W
           30 CONTINUE
@@ -269,7 +272,7 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
              QH=-(H(J+NAV100)+H(J+NAVNAV))*ENDWT
              DO 330 K=NAV100,NAVNAV
              330 QH=QH+H(J+K)
-             fluxo(IWL)=QH/FLOAT(NAVWT)
+             fluxo(KWL)=QH/FLOAT(NAVWT)
 !              Q2(2)=CONT(J)
 !              WRITE(9)Q2
 
@@ -284,11 +287,11 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 ! C                WRITE(6,2300)JWL,WAVE,IRESID,APLOT
 !  2300          FORMAT(1H ,I5,F11.4,I7,101A1)
 !                APLOT(IPLOT)=(1H )
- 33         CONTINUE
+          33 CONTINUE
 
 !  37         DO 34 J=1,npiece
 !  34            CONT(J)=CONT(J+npiece)
-37          DO 350 J=1,500
+        37  DO 350 J=1,500
             350 H(J)=HROT(J+npiece-500)            
             DO 35 J=1,npiece2
             35 HROT(J)=HROT(J+npiece)
@@ -298,10 +301,10 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
             MAX=MIN0(npiece,NWL+npiece-IWL+1)
             DO 38 J=1,MAX
                QH=-(H(J+NAV100)+H(J+NAVNAV))*ENDWT
-            DO 380 K=NAV100,NAVNAV
-380            QH=QH+H(J+K)
+               DO 380 K=NAV100,NAVNAV
+               380 QH=QH+H(J+K)
 
-            fluxo(IWL)=QH/FLOAT(NAVWT)
+               fluxo(KWL)=QH/FLOAT(NAVWT)
 !             Q2(2)=CONT(J)
 !             WRITE(9)Q2
 !             JWL=IWL+J-npiece-1
@@ -314,7 +317,7 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 !             APLOT(IPLOT)=1HX
 ! C               WRITE(6,2300)JWL,WAVE,IRESID,APLOT
 !             APLOT(IPLOT)=(1H )
- 38         CONTINUE
+            38  CONTINUE
  40      CONTINUE
 
 !!!!!!!!!
@@ -324,8 +327,8 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 !      1        NEDGE,WLEDGE,VEL,NV
 !          WRITE(6,1117)
 50       DO 55 IWL=1,NWL
-            READ(19)INT100
-            fluxo(IWL)=FLUX
+            ! READ(19)INT100
+            fluxo(IWL)=fluxi(IWL)
 !             Q2(2)=CONTIN
 !             WRITE(9)Q2
 !             IF(IWL.GT.LINOUT)GO TO 55
@@ -353,8 +356,8 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
 !  41      CONTINUE
 !  500     CLOSE(UNIT=9)
 !       CLOSE(UNIT=2,DISPOSE='DELETE')
-400   CALL EXIT
-      RETURN
+! 400   CALL EXIT
+400      RETURN
 
 !!!!!!!!!!
 !       ! DO BROADEING FOR THE NUMBER OF INPUT ROTATION RATES
@@ -500,8 +503,8 @@ end subroutine rotate
 
 SUBROUTINE WTROT(VEL,VSTEP,NV,NWT,WTMU,NRAD)
   REAL :: VEL, VSTEP, WTMU, CX, CY, IV, IVMU, R, RADIUS, RX, VLAT
-  REAL :: VX, W, XMU
-  INTEGER :: NV, NWT,NRAD,I,ISAVE,IX,IY,MUNWT,IVNWT,WTNWT, N3, MU
+  REAL :: VX, W, XMU, MUNWT, WTNWT
+  INTEGER :: NV, NWT,NRAD,I,ISAVE,IX,IY, IVNWT, N3, MU
 
   COMMON /WT/MUNWT(10000),IVNWT(10000),WTNWT(10000)
   DIMENSION WTMU(100)
@@ -554,22 +557,23 @@ SUBROUTINE WTROT(VEL,VSTEP,NV,NWT,WTMU,NRAD)
       DO 300 I=1,N3
          IVMU=MUNWT(I)
          IF(IVMU.EQ.ISAVE)GO TO 310
-         ISAVE=IVMU
-         IV=IVMU/1000
-         MU=IVMU-IV*1000
-         NWT=NWT+1
-         IF(NWT.GT.10000)STOP 'MORE THAN 10000 POINTS'
-         MUNWT(NWT)=MU
-         IVNWT(NWT)=IV
-         WTNWT(NWT)=W
-         GO TO 300
- 310     WTNWT(NWT)=WTNWT(NWT)+W
-  300 CONTINUE
+           ISAVE=IVMU
+           IV=IVMU/1000
+           MU=IVMU-IV*1000
+           NWT=NWT+1
+           IF(NWT.GT.10000)STOP 'MORE THAN 10000 POINTS'
+           MUNWT(NWT)=MU
+           IVNWT(NWT)=IV
+           WTNWT(NWT)=W
+           GO TO 300
+         310 WTNWT(NWT)=WTNWT(NWT)+W
+      300 CONTINUE
       RETURN
 END SUBROUTINE WTROT
 
 SUBROUTINE INTSORT(DATA,N)
-      INTEGER :: X,Z,DATA(:),N,I,J,K7,K9,LAST,LFST,MID
+      REAL :: DATA(:)
+      INTEGER :: X,Z,N,I,J,K7,K9,LAST,LFST,MID
       INTEGER :: N1, NSTART, NTRY
 
       NTRY=0
