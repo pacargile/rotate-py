@@ -9,7 +9,7 @@ class rotate(object):
             """
 
             # read in fortran library with ctype hooks
-            self.fortran = cdll.LoadLibrary('/Users/pcargile/Astro/bin/FORTRAN/SYNTHE/rotate-py/rotate-py/librotate.so')
+            self.fortran = cdll.LoadLibrary('/Users/pcargile/Astro/bin/FORTRAN/SYNTHE/lib/librotate.so')
 
             # define this useful thing for later
             self.c_double_p = POINTER(c_double)

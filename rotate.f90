@@ -102,7 +102,7 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
       real(c_double), intent(in) :: fluxi(NWL)
       real(c_double), intent(out) :: fluxo(NWL)
 
-      integer, parameter :: npiece=2000,npiece2=npiece*2,npiece3=npiece*3
+      integer, parameter :: npiece=5000,npiece2=npiece*2,npiece3=npiece*3
 
       REAL :: TEFF,GLOG,TITLE(74),RESOLU,WBEGIN,XMU(20),WLEDGE(377)
       REAL :: QMU(NMU),Q2(2)
@@ -254,6 +254,9 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
        DO 29 IWL=1,npiece3
        29 HROT(IWL)=0.
 
+       ! DO 666 II=1,npiece3
+       !  666 IF(MUNWT(II).NE.0) print *,II, MUNWT(II)
+
        DO 40 IWL=npiece+1,NWL+npiece,npiece
           MAX=MIN0(npiece2,NWL+npiece2-IWL+1)
           DO 30 J=npiece+1,MAX
@@ -261,9 +264,9 @@ subroutine rotate(wli,fluxi,fluxo,NWL,NMU,NRADIUS,VROT)bind(c,name='rotate')
              ! READ(19)INT100
 !              CONT(J)=CONTIN
              DO 25 I=1,NWT
-                MU=MUNWT(I)
+                MU=MUNWT(J)
                 IV=IVNWT(I)
-                W=WTNWT(I)*fluxi(KWL)
+                W=WTNWT(I)*fluxi(MU)
                 HROT(J-IV)=HROT(J-IV)+W
              25 HROT(J+IV)=HROT(J+IV)+W
           30 CONTINUE
